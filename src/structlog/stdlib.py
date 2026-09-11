@@ -36,8 +36,8 @@ from ._frames import _find_first_app_frame_and_name, _format_stack
 from ._log_levels import LEVEL_TO_NAME, NAME_TO_LEVEL, add_log_level
 from .contextvars import (
     _ASYNC_CALLING_STACK,
-    _ASYNC_CALLING_THREAD,
     _ASYNC_CALLING_TASK_NAME,
+    _ASYNC_CALLING_THREAD,
     merge_contextvars,
 )
 from .exceptions import DropEvent

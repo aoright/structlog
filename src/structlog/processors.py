@@ -37,7 +37,7 @@ from ._frames import (
 )
 from ._log_levels import NAME_TO_LEVEL, add_log_level
 from ._utils import get_processname
-from .contextvars import _ASYNC_CALLING_THREAD, _ASYNC_CALLING_TASK_NAME
+from .contextvars import _ASYNC_CALLING_TASK_NAME, _ASYNC_CALLING_THREAD
 from .tracebacks import ExceptionDictTransformer
 from .typing import (
     EventDict,

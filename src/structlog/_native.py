@@ -9,7 +9,6 @@ structlog's native high-performance loggers.
 
 from __future__ import annotations
 
-import asyncio
 import collections
 import contextvars
 import sys
@@ -31,8 +30,8 @@ from ._log_levels import (
 )
 from .contextvars import (
     _ASYNC_CALLING_STACK,
-    _ASYNC_CALLING_THREAD,
     _ASYNC_CALLING_TASK_NAME,
+    _ASYNC_CALLING_THREAD,
 )
 from .typing import FilteringBoundLogger
 
