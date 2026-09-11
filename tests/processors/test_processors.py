@@ -293,6 +293,7 @@ class TestFigureOutExcInfo:
 class TestCallsiteParameterAdder:
     parameter_strings = {
         "pathname",
+        "task_name",
         "filename",
         "module",
         "func_name",
@@ -312,6 +313,23 @@ class TestCallsiteParameterAdder:
         if p
         not in (CallsiteParameter.QUAL_NAME, CallsiteParameter.QUAL_MODULE)
     }
+
+    def test_task_name_structlog(self) -> None:
+        """
+        TASK_NAME is added for structlog-originated events.
+        """
+        processor = CallsiteParameterAdder(
+            parameters={CallsiteParameter.TASK_NAME}
+        )
+        import asyncio
+
+        async def run_test():
+            event_dict = {"event": "msg"}
+            actual = processor(None, None, event_dict)
+            assert actual["task_name"] is not None
+            assert actual["task_name"].startswith("Task-")
+
+        asyncio.run(run_test())
 
     def test_all_parameters(self) -> None:
         """
@@ -719,6 +737,18 @@ class TestCallsiteParameterAdder:
         """
         frame_info = inspect.stack()[1]
         frame_traceback = inspect.getframeinfo(frame_info[0])
+
+        def _get_task_name():
+            try:
+                import asyncio
+
+                task = asyncio.current_task()
+                if task:
+                    return task.get_name()
+            except RuntimeError:
+                pass
+            return None
+
         return {
             "pathname": frame_traceback.filename,
             "filename": os.path.basename(frame_traceback.filename),
@@ -731,6 +761,7 @@ class TestCallsiteParameterAdder:
             "thread_name": threading.current_thread().name,
             "process": os.getpid(),
             "process_name": get_processname(),
+            "task_name": _get_task_name(),
         }
 
 

@@ -29,7 +29,11 @@ from ._log_levels import (
     NOTSET,
     WARNING,
 )
-from .contextvars import _ASYNC_CALLING_STACK, _ASYNC_CALLING_THREAD
+from .contextvars import (
+    _ASYNC_CALLING_STACK,
+    _ASYNC_CALLING_THREAD,
+    _ASYNC_CALLING_TASK_NAME,
+)
 from .typing import FilteringBoundLogger
 
 
@@ -65,6 +69,19 @@ async def aexception(
     thread_token = _ASYNC_CALLING_THREAD.set(
         (threading.get_ident(), threading.current_thread().name)
     )
+
+    task_name_token = None
+
+    try:
+        import asyncio
+
+        task = asyncio.current_task()
+
+        if task is not None:
+            task_name_token = _ASYNC_CALLING_TASK_NAME.set(task.get_name())
+
+    except Exception:
+        pass
     scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back)  # type: ignore[arg-type]
     ctx = contextvars.copy_context()
 
@@ -76,6 +93,9 @@ async def aexception(
     finally:
         _ASYNC_CALLING_STACK.reset(scs_token)
         _ASYNC_CALLING_THREAD.reset(thread_token)
+
+        if task_name_token is not None:
+            _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
     return runner
 
@@ -184,6 +204,21 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
             thread_token = _ASYNC_CALLING_THREAD.set(
                 (threading.get_ident(), threading.current_thread().name)
             )
+
+            task_name_token = None
+
+            try:
+                import asyncio
+
+                task = asyncio.current_task()
+
+                if task is not None:
+                    task_name_token = _ASYNC_CALLING_TASK_NAME.set(
+                        task.get_name()
+                    )
+
+            except Exception:
+                pass
             scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back)  # type: ignore[arg-type]
             ctx = contextvars.copy_context()
 
@@ -197,6 +232,9 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
             finally:
                 _ASYNC_CALLING_STACK.reset(scs_token)
                 _ASYNC_CALLING_THREAD.reset(thread_token)
+
+                if task_name_token is not None:
+                    _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
         meth.__name__ = name
         ameth.__name__ = f"a{name}"
@@ -228,6 +266,19 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
         thread_token = _ASYNC_CALLING_THREAD.set(
             (threading.get_ident(), threading.current_thread().name)
         )
+
+        task_name_token = None
+
+        try:
+            import asyncio
+
+            task = asyncio.current_task()
+
+            if task is not None:
+                task_name_token = _ASYNC_CALLING_TASK_NAME.set(task.get_name())
+
+        except Exception:
+            pass
         scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back)  # type: ignore[arg-type]
         ctx = contextvars.copy_context()
 
@@ -241,6 +292,9 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
         finally:
             _ASYNC_CALLING_STACK.reset(scs_token)
             _ASYNC_CALLING_THREAD.reset(thread_token)
+
+            if task_name_token is not None:
+                _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
         return runner
 

@@ -44,6 +44,10 @@ _ASYNC_CALLING_THREAD: contextvars.ContextVar[tuple[int, str]] = (
     contextvars.ContextVar("_ASYNC_CALLING_THREAD")
 )
 
+_ASYNC_CALLING_TASK_NAME: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "_ASYNC_CALLING_TASK_NAME"
+)
+
 # For proper isolation, we have to use a dict of ContextVars instead of a
 # single ContextVar with a dict.
 # See https://github.com/hynek/structlog/pull/302 for details.
