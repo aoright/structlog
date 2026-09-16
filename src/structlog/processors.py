@@ -37,7 +37,11 @@ from ._frames import (
 )
 from ._log_levels import NAME_TO_LEVEL, add_log_level
 from ._utils import get_processname
-from .contextvars import _ASYNC_CALLING_TASK_NAME, _ASYNC_CALLING_THREAD
+from .contextvars import (
+    _ASYNC_CALLING_TASK_NAME,
+    _ASYNC_CALLING_THREAD,
+    _get_current_task_name,
+)
 from .tracebacks import ExceptionDictTransformer
 from .typing import (
     EventDict,
@@ -836,16 +840,7 @@ def _get_callsite_task_name(module: str, frame: FrameType) -> Any:
     if task_name is not None:
         return task_name
 
-    try:
-        import asyncio
-
-        task = asyncio.current_task()
-        if task is not None:
-            return task.get_name()
-    except Exception:
-        pass
-
-    return None
+    return _get_current_task_name()
 
 
 class CallsiteParameterAdder:

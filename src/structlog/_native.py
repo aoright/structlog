@@ -9,6 +9,7 @@ structlog's native high-performance loggers.
 
 from __future__ import annotations
 
+import asyncio
 import collections
 import contextvars
 import sys
@@ -32,6 +33,7 @@ from .contextvars import (
     _ASYNC_CALLING_STACK,
     _ASYNC_CALLING_TASK_NAME,
     _ASYNC_CALLING_THREAD,
+    _get_current_task_name,
 )
 from .typing import FilteringBoundLogger
 
@@ -68,19 +70,7 @@ async def aexception(
     thread_token = _ASYNC_CALLING_THREAD.set(
         (threading.get_ident(), threading.current_thread().name)
     )
-
-    task_name_token = None
-
-    try:
-        import asyncio
-
-        task = asyncio.current_task()
-
-        if task is not None:
-            task_name_token = _ASYNC_CALLING_TASK_NAME.set(task.get_name())
-
-    except Exception:
-        pass
+    task_name_token = _ASYNC_CALLING_TASK_NAME.set(_get_current_task_name())
     scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back)  # type: ignore[arg-type]
     ctx = contextvars.copy_context()
 
@@ -92,9 +82,7 @@ async def aexception(
     finally:
         _ASYNC_CALLING_STACK.reset(scs_token)
         _ASYNC_CALLING_THREAD.reset(thread_token)
-
-        if task_name_token is not None:
-            _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
+        _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
     return runner
 
@@ -203,21 +191,9 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
             thread_token = _ASYNC_CALLING_THREAD.set(
                 (threading.get_ident(), threading.current_thread().name)
             )
-
-            task_name_token = None
-
-            try:
-                import asyncio
-
-                task = asyncio.current_task()
-
-                if task is not None:
-                    task_name_token = _ASYNC_CALLING_TASK_NAME.set(
-                        task.get_name()
-                    )
-
-            except Exception:
-                pass
+            task_name_token = _ASYNC_CALLING_TASK_NAME.set(
+                _get_current_task_name()
+            )
             scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back)  # type: ignore[arg-type]
             ctx = contextvars.copy_context()
 
@@ -231,9 +207,7 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
             finally:
                 _ASYNC_CALLING_STACK.reset(scs_token)
                 _ASYNC_CALLING_THREAD.reset(thread_token)
-
-                if task_name_token is not None:
-                    _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
+                _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
         meth.__name__ = name
         ameth.__name__ = f"a{name}"
@@ -265,19 +239,9 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
         thread_token = _ASYNC_CALLING_THREAD.set(
             (threading.get_ident(), threading.current_thread().name)
         )
-
-        task_name_token = None
-
-        try:
-            import asyncio
-
-            task = asyncio.current_task()
-
-            if task is not None:
-                task_name_token = _ASYNC_CALLING_TASK_NAME.set(task.get_name())
-
-        except Exception:
-            pass
+        task_name_token = _ASYNC_CALLING_TASK_NAME.set(
+            _get_current_task_name()
+        )
         scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back)  # type: ignore[arg-type]
         ctx = contextvars.copy_context()
 
@@ -291,24 +255,28 @@ def _make_filtering_bound_logger(min_level: int) -> type[FilteringBoundLogger]:
         finally:
             _ASYNC_CALLING_STACK.reset(scs_token)
             _ASYNC_CALLING_THREAD.reset(thread_token)
-
-            if task_name_token is not None:
-                _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
+            _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
         return runner
 
-    meths: dict[str, Callable[..., Any]] = {"log": log, "alog": alog}
+    meths: dict[str, Callable[..., Any]] = {
+        "log": log,
+        "alog": alog,
+        "exception": exception,
+        "aexception": aexception,
+    }
     for lvl, name in LEVEL_TO_NAME.items():
         meths[name], meths[f"a{name}"] = make_method(lvl)
 
-    meths["exception"] = exception
-    meths["aexception"] = aexception
-    meths["fatal"] = meths["critical"]
-    meths["afatal"] = meths["acritical"]
-    meths["warn"] = meths["warning"]
-    meths["awarn"] = meths["awarning"]
-    meths["msg"] = meths["info"]
-    meths["amsg"] = meths["ainfo"]
+    for alias, target in [
+        ("fatal", "critical"),
+        ("afatal", "acritical"),
+        ("warn", "warning"),
+        ("awarn", "awarning"),
+        ("msg", "info"),
+        ("amsg", "ainfo"),
+    ]:
+        meths[alias] = meths[target]
 
     # Introspection
     meths["is_enabled_for"] = lambda self, level: level >= min_level

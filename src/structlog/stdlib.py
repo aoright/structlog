@@ -38,6 +38,7 @@ from .contextvars import (
     _ASYNC_CALLING_STACK,
     _ASYNC_CALLING_TASK_NAME,
     _ASYNC_CALLING_THREAD,
+    _get_current_task_name,
     merge_contextvars,
 )
 from .exceptions import DropEvent
@@ -459,19 +460,9 @@ class BoundLogger(BoundLoggerBase):
         thread_token = _ASYNC_CALLING_THREAD.set(
             (threading.get_ident(), threading.current_thread().name)
         )
-
-        task_name_token = None
-
-        try:
-            import asyncio
-
-            task = asyncio.current_task()
-
-            if task is not None:
-                task_name_token = _ASYNC_CALLING_TASK_NAME.set(task.get_name())
-
-        except Exception:
-            pass
+        task_name_token = _ASYNC_CALLING_TASK_NAME.set(
+            _get_current_task_name()
+        )
         scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back.f_back)  # type: ignore[union-attr, arg-type, unused-ignore]
         ctx = contextvars.copy_context()
 
@@ -483,9 +474,7 @@ class BoundLogger(BoundLoggerBase):
         finally:
             _ASYNC_CALLING_STACK.reset(scs_token)
             _ASYNC_CALLING_THREAD.reset(thread_token)
-
-            if task_name_token is not None:
-                _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
+            _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
     async def adebug(self, event: str, *args: Any, **kw: Any) -> None:
         """
@@ -683,19 +672,9 @@ class AsyncBoundLogger:
         thread_token = _ASYNC_CALLING_THREAD.set(
             (threading.get_ident(), threading.current_thread().name)
         )
-
-        task_name_token = None
-
-        try:
-            import asyncio
-
-            task = asyncio.current_task()
-
-            if task is not None:
-                task_name_token = _ASYNC_CALLING_TASK_NAME.set(task.get_name())
-
-        except Exception:
-            pass
+        task_name_token = _ASYNC_CALLING_TASK_NAME.set(
+            _get_current_task_name()
+        )
         scs_token = _ASYNC_CALLING_STACK.set(sys._getframe().f_back.f_back)  # type: ignore[union-attr, arg-type, unused-ignore]
         ctx = contextvars.copy_context()
 
@@ -707,9 +686,7 @@ class AsyncBoundLogger:
         finally:
             _ASYNC_CALLING_STACK.reset(scs_token)
             _ASYNC_CALLING_THREAD.reset(thread_token)
-
-            if task_name_token is not None:
-                _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
+            _ASYNC_CALLING_TASK_NAME.reset(task_name_token)
 
     async def debug(self, event: str, *args: Any, **kw: Any) -> None:
         await self._dispatch_to_sync(self.sync_bl.debug, event, args, kw)
